@@ -17,15 +17,14 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_vk_id = Column(String, nullable=False)
-
-    def __str__(self):
-        return f'Book {self.id}: {self.title}'
-
     favorite_profiles = relationship(
         'FavoriteProfile',
         secondary=UserFavouriteProfile,
         back_populates='users'
     )
+
+    def __str__(self):
+        return f'User {self.id}: vk_id: {self.user_vk_id}'
 
 
 class FavoriteProfile(Base):
@@ -38,3 +37,6 @@ class FavoriteProfile(Base):
         secondary=UserFavouriteProfile,
         back_populates='favorite_profiles'
     )
+
+    def __str__(self):
+        return f'Profile {self.id}: vk_id: {self.profile_id}'
