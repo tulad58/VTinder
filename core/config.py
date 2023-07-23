@@ -15,5 +15,8 @@ class Settings:
     DB_NAME = ENV('db_name')
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+    VK_USER_TOKEN = ENV('vk_user_token')
+    VK_BOT_TOKEN = ENV('vk_bot_token')
+
 
 settings = Settings()
