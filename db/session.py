@@ -36,5 +36,8 @@ class DBHandler:
             engine = create_engine(settings.DATABASE_URL)
             Base.metadata.create_all(engine)
             self.Session = sessionmaker(bind=engine)
+            session = self.Session()
+            return session
         except SQLAlchemyError as error:
-            print("Ошибка подключения к базе данных:", error)
+            print("Ошибка подключения к базе данных:")
+            raise error

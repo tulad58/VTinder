@@ -1,7 +1,10 @@
 from db.session import DBHandler
+from vk.vk import VkBot
+from core.config import settings
 
 if __name__ == '__main__':
     db = DBHandler()
-    db.connect()
-    if db.Session:
-        session = db.Session()
+    session = db.connect()
+    vk_bot = VkBot(access_token=settings.VK_BOT_TOKEN)
+    vk_bot.start()
+
