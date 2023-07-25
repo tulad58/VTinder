@@ -1,6 +1,8 @@
 import json
+import re
 from datetime import datetime
-from random import randrange
+from random import randrange, choice
+
 import vk_api
 from vk_api import VkTools
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -45,7 +47,8 @@ class VK:
         params = {
             'fields': self.fields,
             'sex': search_sex,
-            'has_photo': 1,
+            'has_photo': True,
+            'is_closed': False,
         }
         if city_id:
             params['city_id'] = int(city_id)
@@ -85,48 +88,70 @@ class VkBot:
 
     def start(self):
         for event in self.long_poll.listen():
-            # Если пришло новое сообщение
             if event.type == VkEventType.MESSAGE_NEW:
                 if event.to_me:
                     # События, которые идут от кнопки
                     if 'payload' in event.raw[6]:
                         btn = json.loads(event.payload).get('button')
-                        print(btn)
-                        #НАПИСАТЬ ОБРАБОТКУ НАЖАТИЙ КНОПОК LIKE/DIS/NEXT
-
-                    # Сообщение от пользователя
-                    request = event.text
-                    # Логика ответа - вынести в отдельный блок
-                    if request.upper() == "ПРИВЕТ":
-                        vk_session = VK(access_token=settings.VK_USER_TOKEN)
-                        user_info = vk_session.get_users_info(user_ids=event.user_id)[0]
-                        options = {
-                            'is_closed': False,
-                            'has_photo': True,
-                            'age_from': 14,
-                            'age_to': 80
-                        }
-                        user_age = user_info.get('bdate')  # Запрашивать у пользователя, если нет
-                        if user_age:
-                            options['age_from'] = calculate_age(user_age) - 5
-                            options['age_to'] = calculate_age(user_age)
-                        example_found_user = vk_session.search_users(
-                            sex=user_info['sex'],
-                            city_id=user_info['city']['id'],
-                            age_from=options['age_from'],
-                            age_to=options['age_to']
-                        )[2]
-                        # Добавить проверку приватности, пропускать приватных
-                        example_photo_attachments = vk_session.get_photos(owner_id=example_found_user['id'])
-                        self.send_msg(send_id=event.user_id, message="Привет", attachments=example_photo_attachments)
-                    elif request.upper() == 'ПОКА':
-                        self.send_msg(event.user_id, "Пока((")
-                    elif request.upper() == 'ВЫХОД':
-                        self.send_msg(event.user_id, "Пока((")
+                        if re.match(r'^like_', btn):
+                            user_id = btn.split('like_')[1]
+                            ...
+                        elif re.match(r'^dislike_', btn):
+                            user_id = btn.split('dislike_')[1]
+                            ...
+                        elif re.match(r'^favorites_', btn):
+                            user_id = btn.split('favorites_')[1]
+                            ...
+                        elif btn == 'exit':
+                            print('Возвращайся еще')
                     else:
-                        self.send_msg(event.user_id, "Не поняла вашего ответа...")
+                        self.request_handler(event)
 
-    def send_msg(self, send_id, message, attachments=None):
+    def request_handler(self, event):
+
+        request = event.text
+        if request.upper() == "ПРИВЕТ":
+            vk_session = VK(access_token=settings.VK_USER_TOKEN)
+            current_user = vk_session.get_users_info(user_ids=event.user_id)[0]
+            is_new = self.add_new_user(current_user)
+            options = {
+                'age_from': 14,
+                'age_to': 80
+            }
+            user_age = current_user.get('bdate')
+
+            if user_age:
+                options['age_from'] = calculate_age(user_age) - 5 if current_user['sex'] == 1 else calculate_age(
+                    user_age)
+                options['age_to'] = calculate_age(user_age) if current_user['sex'] == 1 else calculate_age(user_age) + 5
+
+            founded_users = vk_session.search_users(
+                sex=current_user['sex'],
+                city_id=current_user['city']['id'],
+                age_from=options['age_from'],
+                age_to=options['age_to']
+            )
+            message_pack = settings.bot_massages_for_male if current_user[
+                                                                 'sex'] == 2 else settings.bot_massages_for_female
+
+            for user in founded_users:
+                # ЗДЕСЬ ПРОВЕРЯЕМ ЕСТЬ ЛИ ПОЛЬЗОВАТЕЛЬ В СПИСКАХ (ИЗБРАННЫЕ ИЛИ БЛЭКЛИСТ) У ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+                # ЕСЛИ ЕСТЬ ТО ПРОБУЕМ СЛЕДУЮЩЕГО ЕСЛИ НЕТ ТО РАБОТАЕМ ДАЛЬШЕ С НИМ
+                if self.already_viewed(user):
+                    continue
+
+                message = f"{choice(message_pack)} \n " \
+                          f"{user.get('first_name')} {user.get('last_name')}. " \
+                          f"\n Ссылка: http://www.vk.com/{user.get('domain')}"
+
+                photo_attachments = vk_session.get_photos(owner_id=user['id'])
+                self.send_msg(send_id=event.user_id, message=message, attachments=photo_attachments,
+                              user_id=user['id'])
+                break
+        else:
+            self.send_msg(event.user_id, "Не поняла вашего ответа...")
+
+    def send_msg(self, send_id, message, attachments=None, user_id=None):
         """
         Отправка сообщения через метод messages.send
         :param send_id: vk id пользователя, который получит сообщение
@@ -136,8 +161,8 @@ class VkBot:
         """
 
         keyboard = VkKeyboard(one_time=False, inline=True)
+        keyboard.add_button('❤️', VkKeyboardColor.SECONDARY, payload={'button': f'like_{user_id}'})
         keyboard.add_button('👎', VkKeyboardColor.SECONDARY, payload={'button': 'dislike'})
-        keyboard.add_button('❤️', VkKeyboardColor.SECONDARY, payload={'button': 'like'})
         keyboard.add_button('➡️', VkKeyboardColor.SECONDARY, payload={'button': 'next'})
         keyboard.add_line()  # Новая строка для кнопок
         keyboard.add_button('Избранные', VkKeyboardColor.PRIMARY, payload={'button': 'favorites'})
@@ -156,8 +181,29 @@ class VkBot:
         pass
 
     def get_favourites(self):
+        '''
+        Функция возвращает список строк favorites текущего пользователя:
+        Структура: ФИО -- Возраст -- Город -- Ссылка
+        :return:
+        '''
         pass
 
-    def already_viewed(self):
-        pass
+    def already_viewed(self, user) -> bool:
+        '''
+        Эта функция проверяет есть ли ппользователь в каких либо списках у текущего пользователя
+        :param user:
+        :return:
+        '''
+        return False
 
+    def add_new_user(self, user) -> bool:
+        '''
+        Функция принимает пользователя, проверяет есть ли он в БД,
+        Добавляет если его нет и возвращает True,
+        Иначе False
+
+        :param user:
+        :return:  bool
+        '''
+
+        pass
