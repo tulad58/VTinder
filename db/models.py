@@ -16,7 +16,7 @@ class User(Base):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True, index=True)
-    user_vk_id = Column(String, nullable=False)
+    user_vk_id = Column(Integer, nullable=False)
     favorite_profiles = relationship(
         'FavoriteProfile',
         secondary=UserFavouriteProfile,
@@ -30,7 +30,22 @@ class User(Base):
 class FavoriteProfile(Base):
     __tablename__ = 'favorite_profile'
     id = Column(Integer, primary_key=True)
-    profile_id = Column(String, nullable=False)
+    profile_id = Column(Integer, nullable=False)
+
+    users = relationship(
+        'User',
+        secondary=UserFavouriteProfile,
+        back_populates='favorite_profiles'
+    )
+
+    def __str__(self):
+        return f'Profile {self.id}: vk_id: {self.profile_id}'
+
+
+class BlasckList(Base):
+    __tablename__ = 'black_list'
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, nullable=False)
 
     users = relationship(
         'User',

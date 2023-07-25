@@ -1,5 +1,5 @@
 from db.session import DBHandler
-from vk.vk import VkBot
+from vk.bot import VkBot
 from core.config import settings
 
 if __name__ == '__main__':
