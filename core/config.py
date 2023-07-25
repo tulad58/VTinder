@@ -17,6 +17,7 @@ class Settings:
 
     VK_USER_TOKEN = ENV('vk_user_token')
     VK_BOT_TOKEN = ENV('vk_bot_token')
+    VK_API_VERSION = ENV('vk_api_version')
 
 
 settings = Settings()
