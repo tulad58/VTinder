@@ -10,6 +10,7 @@ python = "^3.11"
 sqlalchemy = "^2.0.19"
 environs = "^9.5.0"
 psycopg2 = "^2.9.6"
+vk-api = "^11.9.9"
 
 
 [build-system]
