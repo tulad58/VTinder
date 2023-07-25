@@ -23,7 +23,7 @@ def calculate_age(birth_date):
 
 
 class VK:
-    def __init__(self, access_token, version='5.131'):
+    def __init__(self, access_token, version=settings.VK_API_VERSION):
         self.vk = vk_api.VkApi(token=access_token, api_version=version)
         self.fields = 'about, activities, bdate, books, can_send_friend_request, can_write_private_message, city,' \
                       'domain, interests, lists, music, photo_max_orig, quotes, relation, screen_name, sex'
@@ -92,6 +92,8 @@ class VkBot:
                     if 'payload' in event.raw[6]:
                         btn = json.loads(event.payload).get('button')
                         print(btn)
+                        #НАПИСАТЬ ОБРАБОТКУ НАЖАТИЙ КНОПОК LIKE/DIS/NEXT
+
                     # Сообщение от пользователя
                     request = event.text
                     # Логика ответа - вынести в отдельный блок
@@ -99,20 +101,21 @@ class VkBot:
                         vk_session = VK(access_token=settings.VK_USER_TOKEN)
                         user_info = vk_session.get_users_info(user_ids=event.user_id)[0]
                         options = {
+                            'is_closed': False,
+                            'has_photo': True,
                             'age_from': 14,
                             'age_to': 80
                         }
                         user_age = user_info.get('bdate')  # Запрашивать у пользователя, если нет
                         if user_age:
-                            options['age_from'] = calculate_age(user_age) - 5,
+                            options['age_from'] = calculate_age(user_age) - 5
                             options['age_to'] = calculate_age(user_age)
-
                         example_found_user = vk_session.search_users(
                             sex=user_info['sex'],
                             city_id=user_info['city']['id'],
-                            age_from=options['age_from'][0],
+                            age_from=options['age_from'],
                             age_to=options['age_to']
-                        )[1]
+                        )[2]
                         # Добавить проверку приватности, пропускать приватных
                         example_photo_attachments = vk_session.get_photos(owner_id=example_found_user['id'])
                         self.send_msg(send_id=event.user_id, message="Привет", attachments=example_photo_attachments)
@@ -137,6 +140,7 @@ class VkBot:
         keyboard.add_button('❤️', VkKeyboardColor.SECONDARY, payload={'button': 'like'})
         keyboard.add_button('➡️', VkKeyboardColor.SECONDARY, payload={'button': 'next'})
         keyboard.add_line()  # Новая строка для кнопок
+        keyboard.add_button('Избранные', VkKeyboardColor.PRIMARY, payload={'button': 'favorites'})
         keyboard.add_button('Выход', VkKeyboardColor.PRIMARY, payload={'button': 'exit'})
 
         self.vk.method('messages.send', {'user_id': send_id,
@@ -145,7 +149,15 @@ class VkBot:
                                          'attachment': attachments,
                                          'keyboard': keyboard.get_keyboard()})
 
+    def add_to_favourites(self):
+        pass
 
-if __name__ == '__main__':
-    vk_bot = VkBot(access_token=settings.VK_BOT_TOKEN)
-    vk_bot.start()
+    def add_to_blacklist(self):
+        pass
+
+    def get_favourites(self):
+        pass
+
+    def already_viewed(self):
+        pass
+
