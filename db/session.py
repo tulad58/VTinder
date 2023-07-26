@@ -41,3 +41,7 @@ class DBHandler:
         except SQLAlchemyError as error:
             print("Ошибка подключения к базе данных:")
             raise error
+
+
+db = DBHandler()
+session = db.connect()
