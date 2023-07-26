@@ -54,11 +54,20 @@ class VK:
             'rev': 1,
             'extended': 1
         }
-        photos = self.vk.method('photos.get', params).get('items')
-        if photos:
-            photos_top_likes = sorted(photos, key=lambda x: x['likes']['count'], reverse=True)[:3]
-            return ','.join([f'photo{photo["owner_id"]}_{photo["id"]}' for photo in photos_top_likes])
-        return None
+        try:
+            photos = self.vk.method('photos.get', params).get('items')
+            if photos:
+                photos_top_likes = sorted(photos, key=lambda x: x['likes']['count'], reverse=True)[:3]
+                return ','.join([f'photo{photo["owner_id"]}_{photo["id"]}' for photo in photos_top_likes])
+            return None
+        except vk_api.exceptions.ApiError as e:
+            if e.code == 30:
+                print("Ошибка: Профиль пользователя является приватным")
+            else:
+                # Обработка других ошибок API VK, если необходимо
+                print("Ошибка API VK:", e)
+            return None
+
 
     def get_city(self, city_name):
         city = self.vk.method('database.getCities', {'q': city_name.capitalize(), 'count': 5}).get('items')
