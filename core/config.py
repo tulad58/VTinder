@@ -19,7 +19,7 @@ class Settings:
     VK_BOT_TOKEN = ENV('vk_bot_token')
     VK_API_VERSION = ENV('vk_api_version')
 
-    bot_massages_for_male = (
+    male_msgs = (
         'Как тебе такой вариант?',
         'Может она?',
         'А как тебе эта?',
@@ -28,7 +28,7 @@ class Settings:
         'Лучше не будет, выбирай)'
     )
 
-    bot_massages_for_female = (
+    female_msgs = (
         'Как тебе такой вариант?',
         'Может он?',
         'А как тебе этот?',
@@ -37,5 +37,9 @@ class Settings:
         'Лучше не будет, выбирай)'
     )
 
+    request_fields = 'about, activities, bdate, books, can_send_friend_request, can_write_private_message, city, ' \
+                     'domain, interests, lists, music, photo_max_orig, quotes, relation, screen_name, sex'
+
+    bot_commands = ['привет', '❤️', '👎', '➡️', 'избранные', 'выход', 'setting']
 
 settings = Settings()

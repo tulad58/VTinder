@@ -2,19 +2,39 @@ import vk_api
 from vk_api import VkTools
 
 from core.config import settings
+from vk.base import VKBase
 
 
-class VK:
-    def __init__(self, access_token, version=settings.VK_API_VERSION):
-        self.vk = vk_api.VkApi(token=access_token, api_version=version)
-        self.fields = 'about, activities, bdate, books, can_send_friend_request, can_write_private_message, city,' \
-                      'domain, interests, lists, music, photo_max_orig, quotes, relation, screen_name, sex'
+class VkUserSession(VKBase):
+    sessions_count = 0
 
-    def get_users_info(self, user_ids):
-        return self.vk.method('users.get', {
-            'user_ids': user_ids,
-            'fields': self.fields
-        })
+    def __init__(self, user_access_token, version=settings.VK_API_VERSION, user=None, db_user=None):
+        super().__init__(user_access_token, version)
+        self.user__ = user
+        self.pop_marker__ = 0
+        self.db_user__ = db_user
+        VkUserSession.sessions_count += 1
+
+    def set_db_user(self, db_user):
+        self.db_user__ = db_user
+
+    @property
+    def db_user(self):
+        return self.db_user__
+
+    def set_user(self, user):
+        self.user__ = user
+
+    @property
+    def user(self):
+        return self.user__
+
+    def increase_pop(self):
+        self.pop_marker__ += 1
+
+    @property
+    def pop(self):
+        return self.pop_marker__
 
     def search_users(self, sex=0, city_id=None, age_from=None, age_to=None):
         if sex == 1:
@@ -67,7 +87,6 @@ class VK:
                 # Обработка других ошибок API VK, если необходимо
                 print("Ошибка API VK:", e)
             return None
-
 
     def get_city(self, city_name):
         city = self.vk.method('database.getCities', {'q': city_name.capitalize(), 'count': 5}).get('items')
