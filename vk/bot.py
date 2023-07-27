@@ -23,16 +23,23 @@ class VkBot(VKBase):
     def start(self):
         for event in self.long_poll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                user_session = self.get_or_create_session(event)
-                self.request_handler(user_session, event)
+                # Проверяем наличие пользователя и токена
+                vk_user_token = self.check_user_registration(event)
+                if vk_user_token:
+                    user_session = self.get_or_create_session(vk_user_token, event)
+                    self.request_handler(user_session, event)
 
-    def get_or_create_session(self, event):
+    def get_or_create_session(self, vk_user_token, event):
+        # тут event.user_id и есть current_user['id'], то можно лишний раз не запрашивать get_users_info
         current_user = self.get_users_info(user_ids=event.user_id)[0]
         if current_user['id'] in self.user_sessions:
             return self.user_sessions.get(current_user['id'])
-        new_session = VkUserSession(user_access_token=settings.VK_USER_TOKEN)
+        new_session = VkUserSession(user_access_token=vk_user_token)
         # Метод get.user с токеном группы не возращает полные данные по дате рождения поэтому берем еще раз от имени пользователя
         current_user = new_session.get_users_info(user_ids=event.user_id)[0]
+        # если правильно понял новую логику сюда можно перетянуть из text_handler
+        # current_user = self.check_user_info(event, current_user, new_session)
+        # и уже готовенького со всеми данными добавлять в базу
         new_session.set_db_user(db.get_or_create_user(current_user['id']))
         new_session.set_user(current_user)
         self.user_sessions[current_user['id']] = new_session
@@ -52,8 +59,6 @@ class VkBot(VKBase):
         if next:
             user_session.increase_pop()
         current_user = user_session.user
-        # TEST EXAMPLE
-        # current_user = {'id': 1, 'sex': 2}
         current_user = self.check_user_info(event, current_user, user_session)
         current_user_bdate = current_user.get('bdate')
         if current_user_bdate:
@@ -63,12 +68,16 @@ class VkBot(VKBase):
                 current_user_bdate) + 5
 
             if not self.stack_founded_profiles.get(current_user["id"]):
+                # Теперь получаем больше 1000, если по первому стеку закончились данные,
+                # то для новых search_users можно отработать с status=1,
+                # но тогда нужно будет хранить историю использования status
                 founded_profiles = user_session.search_users(
                     sex=current_user['sex'],
                     city_id=current_user['city']['id'],
                     age_from=age_from,
                     age_to=age_to
                 )
+                # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
                 self.stack_founded_profiles[current_user['id']] = founded_profiles
             self.response_handler(user_session, event, current_user)
 
@@ -198,3 +207,30 @@ class VkBot(VKBase):
                 self.send_msg(send_id=event.user_id, message=msg)
 
         return current_user
+
+    def check_user_registration(self, event):
+        if 'token' in event.text:
+            access_token = re.findall(r'(vk1[^&]+)', event.text)[0]
+            print(access_token)
+            msg = 'Получен access_token 💾 '
+            payload = '{\"command\":\"access_token\"}'
+            self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+            # Добавить в БД User токен и функцию получения / обновления токена
+            # т.е. проверяем есть ли пользователь в БД по event.user_id если нет, то добавляем в БД с token,
+            # если есть то обновляем token
+        else:
+            # Делаем запрос в БД по event.user_id для уточнения токена
+            # Временно добавил подставку settings.VK_USER_TOKEN, когда БД доделаем, то уберем
+            token = settings.VK_USER_TOKEN
+            # token = False
+            if not token:
+                msg = 'Привет🤚\n' \
+                      'Для работы поиска необходим access_token пользователя ⚙️\n' \
+                      'Пройдите по ссылке 👇\n' \
+                      f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=65536&response_type=token\n' \
+                      'Появится окно с запросом доступа 👉 нажимаем "Разрешить"\n' \
+                      'В результате Браузер перекинет на другую ссылку\n' \
+                      'Из этой ссылки нужно скопировать access_token и отправить сообщение с командой token\n' \
+                      'Пример, token - vk1.a.************************************'
+                self.send_msg(send_id=event.user_id, message=msg)
+            return token
