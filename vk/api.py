@@ -36,7 +36,7 @@ class VkUserSession(VKBase):
     def pop(self):
         return self.pop_marker__
 
-    def search_users(self, sex=0, city_id=None, age_from=None, age_to=None):
+    def search_users(self, city_id, age_from, age_to, sex=0, status=6):
         if sex == 1:
             search_sex = 2
         elif sex == 2:
@@ -47,22 +47,23 @@ class VkUserSession(VKBase):
         params = {
             'fields': self.fields,
             'sex': search_sex,
+            'city_id': int(city_id),
+            'status': status,
             'has_photo': True,
             'is_closed': False,
         }
-        if city_id:
-            params['city_id'] = int(city_id)
-        if age_from:
-            params['age_from'] = int(age_from)
-        if age_to:
-            params['age_to'] = int(age_to)
 
-        users = VkTools(self.vk).get_all(
-            method='users.search',
-            max_count=1000,
-            values=params,
-        ).get('items')
-
+        users = []
+        for age in range(int(age_from), int(age_to)):
+            if age_from:
+                params['age_from'] = int(age)
+            if age_to:
+                params['age_to'] = int(age)
+            users += VkTools(self.vk).get_all(
+                method='users.search',
+                max_count=1000,
+                values=params,
+            ).get('items')
         if users:
             return users
         return []

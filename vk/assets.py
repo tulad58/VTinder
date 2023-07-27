@@ -3,10 +3,6 @@ from datetime import datetime
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 
-def get_max_size(sizes):
-    return 'wzyrqpoxms'.index(sizes['type'])
-
-
 def calculate_age(birth_date):
     birth_date = datetime.strptime(birth_date, '%d.%m.%Y')
     current_date = datetime.now()
