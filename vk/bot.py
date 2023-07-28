@@ -17,7 +17,6 @@ class VkBot(VKBase):
         super().__init__(access_token, version)
         self.long_poll = VkLongPoll(self.vk)
         self.text_commands = settings.bot_commands
-        self.stack_founded_profiles = dict()
         self.user_sessions = dict()
 
     def start(self):
@@ -26,24 +25,23 @@ class VkBot(VKBase):
                 # Проверяем наличие пользователя и токена
                 vk_user_token = self.check_user_registration(event)
                 if vk_user_token:
-                    user_session = self.get_or_create_session(vk_user_token, event)
-                    self.request_handler(user_session, event)
+                    user_session, have_all_we_need = self.get_or_create_session(vk_user_token, event)
+                    if have_all_we_need:
+                        self.request_handler(user_session, event)
 
     def get_or_create_session(self, vk_user_token, event):
-        # тут event.user_id и есть current_user['id'], то можно лишний раз не запрашивать get_users_info
-        current_user = self.get_users_info(user_ids=event.user_id)[0]
-        if current_user['id'] in self.user_sessions:
-            return self.user_sessions.get(current_user['id'])
+        have_all_we_need = True
+        if event.user_id in self.user_sessions:
+            return self.user_sessions.get(event.user_id), have_all_we_need
         new_session = VkUserSession(user_access_token=vk_user_token)
-        # Метод get.user с токеном группы не возращает полные данные по дате рождения поэтому берем еще раз от имени пользователя
         current_user = new_session.get_users_info(user_ids=event.user_id)[0]
-        # если правильно понял новую логику сюда можно перетянуть из text_handler
-        # current_user = self.check_user_info(event, current_user, new_session)
-        # и уже готовенького со всеми данными добавлять в базу
-        new_session.set_db_user(db.get_or_create_user(current_user['id']))
-        new_session.set_user(current_user)
-        self.user_sessions[current_user['id']] = new_session
-        return new_session
+        # current_user = {'id': 1}
+        have_all_we_need = self.check_update_user_params(event, current_user, new_session)
+        if have_all_we_need:
+            new_session.set_db_user(db.get_or_create_user(current_user['id']))
+            new_session.set_user(current_user)
+            self.user_sessions[current_user['id']] = new_session
+        return new_session, have_all_we_need
 
     def request_handler(self, user_session: VkUserSession, event):
         event_text = event.text.lower()
@@ -59,7 +57,6 @@ class VkBot(VKBase):
         if next:
             user_session.increase_pop()
         current_user = user_session.user
-        current_user = self.check_user_info(event, current_user, user_session)
         current_user_bdate = current_user.get('bdate')
         if current_user_bdate:
             age_from = calculate_age(current_user_bdate) - 5 if current_user['sex'] == 2 else calculate_age(
@@ -67,7 +64,7 @@ class VkBot(VKBase):
             age_to = calculate_age(current_user_bdate) if current_user['sex'] == 2 else calculate_age(
                 current_user_bdate) + 5
 
-            if not self.stack_founded_profiles.get(current_user["id"]):
+            if not user_session.founded_profiles:
                 # Теперь получаем больше 1000, если по первому стеку закончились данные,
                 # то для новых search_users можно отработать с status=1,
                 # но тогда нужно будет хранить историю использования status
@@ -78,24 +75,25 @@ class VkBot(VKBase):
                     age_to=age_to
                 )
                 # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
-                self.stack_founded_profiles[current_user['id']] = founded_profiles
+                user_session.founded_profiles = founded_profiles
             self.response_handler(user_session, event, current_user)
 
     def payload_handler(self, user_session: VkUserSession, event):
         command_obj = json.loads(event.payload)
         command = command_obj.get('command')
         founded_profile_id = command_obj.get("founded_profile")
+        profile_firsname = command_obj.get("profile_firstname")
         if command == 'like':
             is_added = self.add_to_favorites(user_session.db_user, founded_profile_id)
             if is_added:
                 self.send_msg(send_id=event.user_id,
-                              message=f'Пользователь id{founded_profile_id} добавлен в ⭐ Избранное')
+                              message=f'{profile_firsname} теперь в ваших ⭐ Избранных')
             self.text_handler(user_session, event)
         elif command == 'dislike':
             is_added = self.add_to_blacklist(user_session.db_user, founded_profile_id)
             if is_added:
                 self.send_msg(send_id=event.user_id,
-                              message=f'Пользователь id{founded_profile_id} добавлен в 👎 Чёрный список')
+                              message=f'{profile_firsname} теперь в вашем 👎 Черном списке')
             self.text_handler(user_session, event)
         elif command == 'next':
             self.text_handler(user_session, event, next=True)
@@ -108,19 +106,18 @@ class VkBot(VKBase):
     def response_handler(self, user_session, event, current_user):
 
         message_pack = settings.male_msgs if current_user['sex'] == 2 else settings.female_msgs
-        print(self.stack_founded_profiles[current_user['id']][0]['id'])
         while True:
-            profile = self.stack_founded_profiles[current_user['id']].pop(user_session.pop)
+            profile = user_session.founded_profiles.pop(user_session.pop)
             if self.already_viewed(user_session.db_user, profile['id']):
+                continue
+            photo_attachments = user_session.get_photos(owner_id=profile['id'])
+            if photo_attachments is None:
                 continue
             break
 
         message = f'{choice(message_pack)} \n' \
                   f'{profile.get("first_name")} {profile.get("last_name")}.\n' \
                   f'Ссылка: https://vk.com/{profile.get("domain")}'
-        photo_attachments = user_session.get_photos(owner_id=profile['id'])
-        if photo_attachments is None:
-            message += f'\nФото недоступно - приватный профиль пользователя'
         vk_keyboard = keyboard_gen(event, profile)
         self.send_msg(send_id=event.user_id, message=message, attachments=photo_attachments,
                       keyboard=vk_keyboard)
@@ -189,24 +186,28 @@ class VkBot(VKBase):
         user_vk_id = user.get('id')
         return db.get_or_create_user(user_vk_id)
 
-    def check_user_info(self, event, current_user, vk_session):
+    def check_update_user_params(self, event, current_user, vk_session):
+        if not current_user.get('sex') or not current_user.get('city'):
+            # Обработать исключения когда у пользователя нет города или пола
+            pass
         if not current_user.get('bdate'):
             if 'setting' in event.text:
                 setting = re.findall(r'-\s*(\d{2}.\d{2}.\d{4})\s*-\s*(\S+)', event.text)[0]
                 current_user['bdate'] = setting[0]
                 current_user['city'] = vk_session.get_city(setting[1])
-                msg = f'Получены настройки:\n ' \
-                      f'Дата рождения - {current_user["bdate"]},\n ' \
-                      f'Город поиска - {current_user["city"]["title"]}'
+                msg = f'Получены настройки\n ' \
+                      f'Дата рождения: {current_user["bdate"]},\n ' \
+                      f'Город поиска:  {current_user["city"]["title"]}'
                 payload = '{\"command\":\"setting\"}'
                 self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+                return True
             else:
                 msg = 'Не удается получить данные пользователя😔\n' \
-                      'Введи команду setting с указанием даты рождения и города.\n' \
-                      'Пример, setting - 01.01.1990 - Москва'
+                      'Введи команду setting с указанием даты рождения и города.\n\n' \
+                      'Пример: setting - 01.01.1990 - Москва'
                 self.send_msg(send_id=event.user_id, message=msg)
-
-        return current_user
+                return False
+        return True
 
     def check_user_registration(self, event):
         if 'token' in event.text:

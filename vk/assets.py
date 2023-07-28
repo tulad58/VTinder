@@ -18,21 +18,25 @@ def keyboard_gen(event, profile):
                         color=VkKeyboardColor.SECONDARY,
                         payload={'command': 'like',
                                  'current_user': event.user_id,
-                                 'founded_profile': profile['id']})
+                                 'founded_profile': profile['id'],
+                                 'profile_firstname': profile['first_name'],
+                                 })
     keyboard.add_button('👎',
                         color=VkKeyboardColor.SECONDARY,
                         payload={'command': 'dislike',
                                  'current_user': event.user_id,
-                                 'founded_profile': profile['id']})
+                                 'founded_profile': profile['id'],
+                                 'profile_firstname': profile['first_name'],
+                                 })
     keyboard.add_button('➡️', color=VkKeyboardColor.SECONDARY, payload={'command': 'next'})
     keyboard.add_line()  # Новая строка для кнопок
     keyboard.add_button('Избранные',
                         color=VkKeyboardColor.PRIMARY,
                         payload={
                             'command': 'favorites',
-                            'current_user': event.user_id
+                            'current_user': event.user_id,
                         })
     keyboard.add_button('Выход',
                         color=VkKeyboardColor.PRIMARY,
-                        payload={'command': 'exit'})
+                        payload={'command': 'exit',})
     return keyboard.get_keyboard()

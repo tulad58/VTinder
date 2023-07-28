@@ -10,31 +10,32 @@ class VkUserSession(VKBase):
 
     def __init__(self, user_access_token, version=settings.VK_API_VERSION, user=None, db_user=None):
         super().__init__(user_access_token, version)
-        self.user__ = user
-        self.pop_marker__ = 0
-        self.db_user__ = db_user
+        self.__user = user
+        self.__pop_marker = 0
+        self.__db_user = db_user
+        self.founded_profiles = None
         VkUserSession.sessions_count += 1
 
     def set_db_user(self, db_user):
-        self.db_user__ = db_user
+        self.__db_user = db_user
 
     @property
     def db_user(self):
-        return self.db_user__
+        return self.__db_user
 
     def set_user(self, user):
-        self.user__ = user
+        self.__user = user
 
     @property
     def user(self):
-        return self.user__
+        return self.__user
 
     def increase_pop(self):
-        self.pop_marker__ += 1
+        self.__pop_marker += 1
 
     @property
     def pop(self):
-        return self.pop_marker__
+        return self.__pop_marker
 
     def search_users(self, city_id, age_from, age_to, sex=0, status=6):
         if sex == 1:
@@ -83,7 +84,7 @@ class VkUserSession(VKBase):
             return None
         except vk_api.exceptions.ApiError as e:
             if e.code == 30:
-                print("Ошибка: Профиль пользователя является приватным")
+                print(f"Профиль пользователя {owner_id} является приватным")
             else:
                 # Обработка других ошибок API VK, если необходимо
                 print("Ошибка API VK:", e)
