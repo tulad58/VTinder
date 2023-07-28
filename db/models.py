@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -36,8 +36,20 @@ class User(Base):
         backref='haters'
     )
 
+    setting = relationship('UserSetting', backref='user')
+
     def __str__(self):
         return f'User {self.id}: vk_id: {self.user_vk_id}'
+
+
+class UserSetting(Base):
+    __tablename__ = 'user_setting'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(ForeignKey('user.id'), nullable=False)
+    gender_vk_id = Column(Integer, nullable=False)
+    target_gender_id = Column(Integer, nullable=False)
+    date_of_birth = Column(Date, nullable=True)
 
 
 class Profile(Base):
