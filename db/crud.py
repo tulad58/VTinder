@@ -1,5 +1,5 @@
 from db.session import session
-from .models import User, FavoriteProfile, UserFavouriteProfile, UserBlackList, BlackList
+from .models import User, Profile, UserFavouriteProfile, UserBlackList
 
 
 class BaseCRUD:
@@ -52,12 +52,12 @@ class BaseCRUD:
             return False
 
     def get_or_create_new_favorite_profile(self, profile_vk_id: int):
-        profile = session.query(FavoriteProfile).filter(FavoriteProfile.profile_id == profile_vk_id).first()
+        profile = session.query(Profile).filter(Profile.profile_id == profile_vk_id).first()
         if profile:
             print(f'Профиль {profile_vk_id} уже был в избранных')
             return profile
 
-        profile = FavoriteProfile(profile_id=profile_vk_id)
+        profile = Profile(profile_id=profile_vk_id)
         session.add(profile)
         session.commit()
         session.refresh(profile)
@@ -65,12 +65,12 @@ class BaseCRUD:
         return profile
 
     def get_or_create_new_blacklist_profile(self, profile_vk_id: int):
-        profile = session.query(BlackList).filter(BlackList.profile_id == profile_vk_id).first()
+        profile = session.query(Profile).filter(Profile.profile_id == profile_vk_id).first()
         if profile:
             print(f'Профиль {profile_vk_id} уже был в черных списках')
             return profile
 
-        profile = BlackList(profile_id=profile_vk_id)
+        profile = Profile(profile_id=profile_vk_id)
         session.add(profile)
         session.commit()
         session.refresh(profile)
