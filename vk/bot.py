@@ -61,7 +61,7 @@ class VkBot(VKBase):
         current_user = user_session.user
         current_user_bdate = current_user.get('bdate')
         age_from = settings.default_age_from
-        age_to = settings.default_age_to  
+        age_to = settings.default_age_to
         if current_user_bdate:
             current_user['age'] = calculate_age(current_user_bdate)
             age_from = current_user['age'] - 5 if current_user['sex'] == 2 else current_user['age']
@@ -84,7 +84,7 @@ class VkBot(VKBase):
             # сортировка founded_profiles с оценкой интересов
             user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
         self.response_handler(user_session, event, current_user)
-            
+
     def payload_handler(self, user_session: VkUserSession, event):
         command_obj = json.loads(event.payload)
         command = command_obj.get('command')
@@ -93,7 +93,8 @@ class VkBot(VKBase):
         profile_lastname = command_obj.get("profile_lastname")
         profile_domain = command_obj.get("profile_domain")
         if command == 'like':
-            is_added = self.add_to_favorites(user_session.db_user, founded_profile_id, profile_firstname, profile_lastname, profile_domain)
+            is_added = self.add_to_favorites(user_session.db_user, founded_profile_id, profile_firstname,
+                                             profile_lastname, profile_domain)
             if is_added:
                 self.send_msg(send_id=event.user_id,
                               message=f'{profile_firstname} теперь в ваших ⭐ Избранных')
@@ -151,9 +152,21 @@ class VkBot(VKBase):
         except vk_api.exceptions.ApiError as error:
             print('Ошибка отправки сообщения: ', error)
 
-    def add_to_favorites(self, db_user, profile_vk_id: int, profile_firstname: str, profile_lastname: str, profile_domain: str):
+    def add_to_favorites(self,
+                         db_user,
+                         profile_vk_id: int,
+                         profile_firstname: str,
+                         profile_lastname: str,
+                         profile_domain: str
+                         ):
         if db_user and profile_vk_id:
-            return db.add_favorite(db_user, profile_vk_id, profile_firstname, profile_lastname, profile_domain)
+            return db.add_favorite(
+                db_user,
+                profile_vk_id,
+                profile_firstname,
+                profile_lastname,
+                profile_domain
+            )
         raise ValueError('Problem with vk_id')
 
     def add_to_blacklist(self, db_user, profile_vk_id: int = None):

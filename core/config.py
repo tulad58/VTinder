@@ -43,8 +43,8 @@ class Settings:
 
     bot_commands = ['привет', '❤️', '👎', '➡️', 'избранные', 'выход', 'setting', 'token']
 
-    default_age_from = 1
-    default_age_to = 100
+    default_age_from = 18
+    default_age_to = 80
 
 
 settings = Settings()
