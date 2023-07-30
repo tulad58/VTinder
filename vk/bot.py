@@ -10,6 +10,7 @@ from db.crud import db
 from vk.api import VkUserSession
 from vk.assets import calculate_age, keyboard_gen
 from vk.base import VKBase
+from vk.eval import evaluation_profiles
 
 
 class VkBot(VKBase):
@@ -51,23 +52,26 @@ class VkBot(VKBase):
             else:
                 self.text_handler(user_session, event)
         else:
-            self.send_msg(event.user_id, f'Напишите: "Привет" и я попробую найти для вас пару {event_text}')
+            self.send_msg(event.user_id, f'❗❗❗Неизвестная команда: {event_text}❗❗❗\n'
+                                         f'Напишите: "Привет" и я попробую найти для вас пару')
 
     def text_handler(self, user_session: VkUserSession, event, next=None):
         if next:
             user_session.increase_pop()
         current_user = user_session.user
         current_user_bdate = current_user.get('bdate')
+        current_user['age'] = calculate_age(current_user_bdate)
         if current_user_bdate:
-            age_from = calculate_age(current_user_bdate) - 5 if current_user['sex'] == 2 else calculate_age(
-                current_user_bdate)
-            age_to = calculate_age(current_user_bdate) if current_user['sex'] == 2 else calculate_age(
-                current_user_bdate) + 5
+            age_from = current_user['age'] - 5 if current_user['sex'] == 2 else current_user['age']
+            age_to = current_user['age'] if current_user['sex'] == 2 else current_user['age'] + 5
 
             if not user_session.founded_profiles:
                 # Теперь получаем больше 1000, если по первому стеку закончились данные,
                 # то для новых search_users можно отработать с status=1,
                 # но тогда нужно будет хранить историю использования status
+                self.send_msg(send_id=event.user_id,
+                              message=f'🕵️Идет поиск...')
+
                 founded_profiles = user_session.search_users(
                     sex=current_user['sex'],
                     city_id=current_user['city']['id'],
@@ -75,7 +79,9 @@ class VkBot(VKBase):
                     age_to=age_to
                 )
                 # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
-                user_session.founded_profiles = founded_profiles
+
+                # сортировка founded_profiles с оценкой интересов
+                user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
             self.response_handler(user_session, event, current_user)
 
     def payload_handler(self, user_session: VkUserSession, event):
@@ -228,7 +234,7 @@ class VkBot(VKBase):
                 msg = 'Привет🤚\n' \
                       'Для работы поиска необходим access_token пользователя ⚙️\n' \
                       'Пройдите по ссылке 👇\n' \
-                      f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=65536&response_type=token\n' \
+                      f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=327686&response_type=token\n' \
                       'Появится окно с запросом доступа 👉 нажимаем "Разрешить"\n' \
                       'В результате Браузер перекинет на другую ссылку\n' \
                       'Из этой ссылки нужно скопировать access_token и отправить сообщение с командой token\n' \
