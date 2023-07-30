@@ -29,6 +29,8 @@ def keyboard_gen(event, profile):
                                  'current_user': event.user_id,
                                  'founded_profile': profile['id'],
                                  'profile_firstname': profile['first_name'],
+                                 'profile_lastname': profile['last_name'],
+                                 'profile_domain': profile['domain'],
                                  })
     keyboard.add_button('➡️', color=VkKeyboardColor.SECONDARY, payload={'command': 'next'})
     keyboard.add_line()  # Новая строка для кнопок

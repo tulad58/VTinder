@@ -56,8 +56,8 @@ class Profile(Base):
     __tablename__ = 'profile'
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, nullable=False)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
     domain = Column(String, nullable=False)
 
     def __str__(self):

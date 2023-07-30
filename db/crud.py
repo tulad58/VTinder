@@ -17,36 +17,24 @@ class BaseCRUD:
         print(f'Создан новый пользователь {vk_id}')
         return user
 
-    def add_favorite(self, db_user, profile_vk_id: int, profile_firstname: str, profile_lastname: str,
-                     profile_domain: str) -> bool:
+    def add_to_lists(self, db_user, profile_vk_id: int, profile_firstname: str, profile_lastname: str,
+                     profile_domain: str, blacklist=False) -> bool:
         try:
             profile = self.get_or_create_profile(profile_vk_id, profile_firstname, profile_lastname, profile_domain)
 
-            new_favourite_profile = UserFavouriteProfile(
-                user_id=db_user.id,
-                profile_id=profile.id
-            )
-
-            session.add(new_favourite_profile)
+            if blacklist:
+                profile = UserBlackList(
+                    user_id=db_user.id,
+                    profile_id=profile.id
+                )
+            else:
+                profile = UserFavouriteProfile(
+                    user_id=db_user.id,
+                    profile_id=profile.id
+                )
+            session.add(profile)
             session.commit()
-            print(f'Профиль {profile_vk_id} добавлен в избранные к {db_user.user_vk_id}')
-            return True
-        except:
-            return False
-
-    def add_to_blacklist(self, db_user: int, profile_vk_id: int) -> bool:
-
-        try:
-            profile = self.get_or_create_profile(profile_vk_id)
-
-            new_blacklist_profile = UserBlackList(
-                user_id=db_user.id,
-                profile_id=profile.id
-            )
-
-            session.add(new_blacklist_profile)
-            session.commit()
-            print(f'Профиль {profile_vk_id} добавлен в черный список к {db_user.user_vk_id}')
+            print(f'Профиль {profile_vk_id} добавлен в списки к {db_user.user_vk_id}')
             return True
         except:
             return False

@@ -82,6 +82,8 @@ class VkBot(VKBase):
             # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
 
             # сортировка founded_profiles с оценкой интересов
+            self.send_msg(send_id=event.user_id,
+                          message=f'🕵️Выбираю кто тебе больше подходит...')
             user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
         self.response_handler(user_session, event, current_user)
 
@@ -93,14 +95,16 @@ class VkBot(VKBase):
         profile_lastname = command_obj.get("profile_lastname")
         profile_domain = command_obj.get("profile_domain")
         if command == 'like':
-            is_added = self.add_to_favorites(user_session.db_user, founded_profile_id, profile_firstname,
-                                             profile_lastname, profile_domain)
+            is_added = self.add_to_list(user_session.db_user, founded_profile_id, profile_firstname,
+                                        profile_lastname, profile_domain)
             if is_added:
                 self.send_msg(send_id=event.user_id,
                               message=f'{profile_firstname} теперь в ваших ⭐ Избранных')
             self.text_handler(user_session, event)
         elif command == 'dislike':
-            is_added = self.add_to_blacklist(user_session.db_user, founded_profile_id)
+            to_blacklist = True
+            is_added = self.add_to_list(user_session.db_user, founded_profile_id, profile_firstname,
+                                        profile_lastname, profile_domain, to_blacklist)
             if is_added:
                 self.send_msg(send_id=event.user_id,
                               message=f'{profile_firstname} теперь в вашем 👎 Черном списке')
@@ -152,26 +156,22 @@ class VkBot(VKBase):
         except vk_api.exceptions.ApiError as error:
             print('Ошибка отправки сообщения: ', error)
 
-    def add_to_favorites(self,
-                         db_user,
-                         profile_vk_id: int,
-                         profile_firstname: str,
-                         profile_lastname: str,
-                         profile_domain: str
-                         ):
+    def add_to_list(self,
+                    db_user,
+                    profile_vk_id: int,
+                    profile_firstname: str,
+                    profile_lastname: str,
+                    profile_domain: str,
+                    blacklist=False):
         if db_user and profile_vk_id:
-            return db.add_favorite(
+            return db.add_to_lists(
                 db_user,
                 profile_vk_id,
                 profile_firstname,
                 profile_lastname,
-                profile_domain
+                profile_domain,
+                blacklist
             )
-        raise ValueError('Problem with vk_id')
-
-    def add_to_blacklist(self, db_user, profile_vk_id: int = None):
-        if db_user and profile_vk_id:
-            return db.add_to_blacklist(db_user, profile_vk_id)
         raise ValueError('Problem with vk_id')
 
     def get_favorites(self, user_id):
