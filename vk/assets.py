@@ -42,5 +42,5 @@ def keyboard_gen(event, profile):
                         })
     keyboard.add_button('Выход',
                         color=VkKeyboardColor.PRIMARY,
-                        payload={'command': 'exit',})
+                        payload={'command': 'exit', })
     return keyboard.get_keyboard()

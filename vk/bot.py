@@ -36,7 +36,6 @@ class VkBot(VKBase):
             return self.user_sessions.get(event.user_id), have_all_we_need
         new_session = VkUserSession(user_access_token=vk_user_token)
         current_user = new_session.get_users_info(user_ids=event.user_id)[0]
-        # current_user = {'id': 1}
         have_all_we_need = self.check_update_user_params(event, current_user, new_session)
         if have_all_we_need:
             new_session.set_db_user(db.get_or_create_user(current_user['id']))
@@ -71,7 +70,7 @@ class VkBot(VKBase):
             # то для новых search_users можно отработать с status=1,
             # но тогда нужно будет хранить историю использования status
             self.send_msg(send_id=event.user_id,
-                          message=f'🕵️Идет поиск...')
+                          message=f'️🕵️Начинаю поиск...')
 
             founded_profiles = user_session.search_users(
                 sex=current_user['sex'],
@@ -90,10 +89,10 @@ class VkBot(VKBase):
     def payload_handler(self, user_session: VkUserSession, event):
         command_obj = json.loads(event.payload)
         command = command_obj.get('command')
-        founded_profile_id = command_obj.get("founded_profile")
-        profile_firstname = command_obj.get("profile_firstname")
-        profile_lastname = command_obj.get("profile_lastname")
-        profile_domain = command_obj.get("profile_domain")
+        founded_profile_id = command_obj.get('founded_profile')
+        profile_firstname = command_obj.get('profile_firstname')
+        profile_lastname = command_obj.get('profile_lastname')
+        profile_domain = command_obj.get('profile_domain')
         if command == 'like':
             is_added = self.add_to_list(user_session.db_user, founded_profile_id, profile_firstname,
                                         profile_lastname, profile_domain)
@@ -118,7 +117,7 @@ class VkBot(VKBase):
             self.send_msg(send_id=event.user_id, message='👋Возвращайся еще')
 
     def response_handler(self, user_session, event, current_user):
-
+        photo_attachments = None
         message_pack = settings.male_msgs if current_user['sex'] == 2 else settings.female_msgs
         while True:
             profile = user_session.founded_profiles.pop(user_session.pop)
@@ -247,7 +246,8 @@ class VkBot(VKBase):
                 msg = 'Привет🤚\n' \
                       'Для работы поиска необходим access_token пользователя ⚙️\n' \
                       'Пройдите по ссылке 👇\n' \
-                      f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=327686&response_type=token\n' \
+                      f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=327686' \
+                      f'&response_type=token\n' \
                       'Появится окно с запросом доступа 👉 нажимаем "Разрешить"\n' \
                       'В результате Браузер перекинет на другую ссылку\n' \
                       'Из этой ссылки нужно скопировать access_token и отправить сообщение с командой token\n' \

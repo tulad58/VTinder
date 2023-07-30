@@ -1,40 +1,40 @@
 import string
 import re
 
-def extract_keywords(text):
+
+def extract_keywords(text: str) -> list:
     """
-    Функция принимает текст убирая лишние данные.
-    Args:
-        text (str): Интересы пользователя в виде строки.
-    Returns:
-        list: Список ключевых слов
+    Функция принимает текст убирая лишние данные
+    :param text: Интересы пользователя в виде строки
+    :return: Список уникальных ключевых слов
     """
-    # Удаление символов пунктуации из строки
     str_cleaned = text.translate(str.maketrans('', '', string.punctuation))
     # Поиск всех слов в строке, содержащих более 2х символов
     words = re.findall(r'\b\w{3,}\b', str_cleaned.lower())
-    # Возвращаем список уникальных слов
     return list(set(words))
 
 
-def get_cost_eval(user_key, profile_interests, point):
-    cost_eval = 0
-    if user_key and profile_interests:
-        cost_eval = point * round(get_matches(profile_interests, user_key) / len(user_key), 2)
-    return cost_eval
+def get_cost_eval(user_interests: list, profile_interests: str, point: int) -> float:
+    """
+    Функция рассчитывает оценку
+    :param user_interests: Список ключевых интересов пользователя
+    :param profile_interests: Интересы найденного профиля в виде строки
+    :param point: Вес оценки
+    :return: Количество совпадений между ключевыми интересами и интересами клиента
+    """
+    return point * round(get_matches(profile_interests, user_interests) / len(user_interests), 2) \
+        if user_interests and profile_interests else 0
 
 
-def get_matches(profile_interests, key_interests):
+def get_matches(profile_interests: str, user_interests: list) -> int:
     """
     Функция подсчитывает количество совпадений между ключевыми интересами и интересами клиента.
-    Args:
-        profile_interests (str): Интересы клиента в виде строки.
-        key_interests (list): Список ключевых интересов.
-    Returns:
-        int: Количество совпадений между ключевыми интересами и интересами клиента.
+    :param user_interests: Список ключевых интересов пользователя
+    :param profile_interests: Интересы найденного профиля в виде строки
+    :return: Количество совпадений между ключевыми интересами и интересами клиента
     """
     profile_interests_lower = profile_interests.lower()
-    matching_count = sum(interest.lower() in profile_interests_lower for interest in key_interests)
+    matching_count = sum(interest.lower() in profile_interests_lower for interest in user_interests)
     return matching_count
 
 
@@ -60,5 +60,4 @@ def evaluation_profiles(current_user, founded_profiles):
         founded_profiles[i]['eval'] = cost_age + cost_interest + cost_music + cost_books
 
     result = sorted(founded_profiles, key=lambda x: float(x['eval']), reverse=True)
-
     return result

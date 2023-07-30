@@ -38,13 +38,7 @@ class VkUserSession(VKBase):
         return self.__pop_marker
 
     def search_users(self, city_id, age_from, age_to, sex=0, status=6):
-        if sex == 1:
-            search_sex = 2
-        elif sex == 2:
-            search_sex = 1
-        else:
-            search_sex = 0
-
+        search_sex = 2 if sex == 1 else 1 if sex == 2 else 0
         params = {
             'fields': self.fields,
             'sex': search_sex,
@@ -65,9 +59,7 @@ class VkUserSession(VKBase):
                 max_count=1000,
                 values=params,
             ).get('items')
-        if users:
-            return users
-        return []
+        return users if users else []
 
     def get_photos(self, owner_id, album_id='profile'):
         params = {
@@ -99,7 +91,4 @@ class VkUserSession(VKBase):
 
     def get_city(self, city_name):
         city = self.vk.method('database.getCities', {'q': city_name.capitalize(), 'count': 5}).get('items')
-        if city:
-            return city[0]
-        else:
-            return None
+        return city[0] if city else None
