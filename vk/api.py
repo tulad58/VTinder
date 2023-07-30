@@ -77,13 +77,20 @@ class VkUserSession(VKBase):
             'extended': 1
         }
         try:
-            photos = self.vk.method('photos.get', params).get('items')
+            photos = []
+            photos_from_avatars = self.vk.method('photos.get', params).get('items')
+            if photos_from_avatars:
+                photos += photos_from_avatars
+            photos_marked_user = self.vk.method('photos.getUserPhotos', {'user_id': owner_id, 'extended': 1})\
+                .get('items')
+            if photos_marked_user:
+                photos += photos_marked_user
             if photos:
                 photos_top_likes = sorted(photos, key=lambda x: x['likes']['count'], reverse=True)[:3]
                 return ','.join([f'photo{photo["owner_id"]}_{photo["id"]}' for photo in photos_top_likes])
             return None
         except vk_api.exceptions.ApiError as e:
-            if e.code == 30:
+            if e.code == 30 or e.code == 7:
                 print(f"Профиль пользователя {owner_id} является приватным")
             else:
                 # Обработка других ошибок API VK, если необходимо
