@@ -60,46 +60,49 @@ class VkBot(VKBase):
             user_session.increase_pop()
         current_user = user_session.user
         current_user_bdate = current_user.get('bdate')
-        current_user['age'] = calculate_age(current_user_bdate)
+        age_from = settings.default_age_from
+        age_to = settings.default_age_to  
         if current_user_bdate:
+            current_user['age'] = calculate_age(current_user_bdate)
             age_from = current_user['age'] - 5 if current_user['sex'] == 2 else current_user['age']
             age_to = current_user['age'] if current_user['sex'] == 2 else current_user['age'] + 5
+        if not user_session.founded_profiles:
+            # Теперь получаем больше 1000, если по первому стеку закончились данные,
+            # то для новых search_users можно отработать с status=1,
+            # но тогда нужно будет хранить историю использования status
+            self.send_msg(send_id=event.user_id,
+                          message=f'🕵️Идет поиск...')
 
-            if not user_session.founded_profiles:
-                # Теперь получаем больше 1000, если по первому стеку закончились данные,
-                # то для новых search_users можно отработать с status=1,
-                # но тогда нужно будет хранить историю использования status
-                self.send_msg(send_id=event.user_id,
-                              message=f'🕵️Идет поиск...')
+            founded_profiles = user_session.search_users(
+                sex=current_user['sex'],
+                city_id=current_user['city']['id'],
+                age_from=age_from,
+                age_to=age_to
+            )
+            # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
 
-                founded_profiles = user_session.search_users(
-                    sex=current_user['sex'],
-                    city_id=current_user['city']['id'],
-                    age_from=age_from,
-                    age_to=age_to
-                )
-                # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
-
-                # сортировка founded_profiles с оценкой интересов
-                user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
-            self.response_handler(user_session, event, current_user)
-
+            # сортировка founded_profiles с оценкой интересов
+            user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
+        self.response_handler(user_session, event, current_user)
+            
     def payload_handler(self, user_session: VkUserSession, event):
         command_obj = json.loads(event.payload)
         command = command_obj.get('command')
         founded_profile_id = command_obj.get("founded_profile")
-        profile_firsname = command_obj.get("profile_firstname")
+        profile_firstname = command_obj.get("profile_firstname")
+        profile_lastname = command_obj.get("profile_lastname")
+        profile_domain = command_obj.get("profile_domain")
         if command == 'like':
-            is_added = self.add_to_favorites(user_session.db_user, founded_profile_id)
+            is_added = self.add_to_favorites(user_session.db_user, founded_profile_id, profile_firstname, profile_lastname, profile_domain)
             if is_added:
                 self.send_msg(send_id=event.user_id,
-                              message=f'{profile_firsname} теперь в ваших ⭐ Избранных')
+                              message=f'{profile_firstname} теперь в ваших ⭐ Избранных')
             self.text_handler(user_session, event)
         elif command == 'dislike':
             is_added = self.add_to_blacklist(user_session.db_user, founded_profile_id)
             if is_added:
                 self.send_msg(send_id=event.user_id,
-                              message=f'{profile_firsname} теперь в вашем 👎 Черном списке')
+                              message=f'{profile_firstname} теперь в вашем 👎 Черном списке')
             self.text_handler(user_session, event)
         elif command == 'next':
             self.text_handler(user_session, event, next=True)
@@ -148,12 +151,9 @@ class VkBot(VKBase):
         except vk_api.exceptions.ApiError as error:
             print('Ошибка отправки сообщения: ', error)
 
-    def add_to_favorites(self, db_user, profile_vk_id: int = None):
-        # нужно добавить:
-        # сохранение ссылок на профиль, чтобы возвращать в get_favorites
-        # параметр favor - boolean если like то True, Черный список - False
+    def add_to_favorites(self, db_user, profile_vk_id: int, profile_firstname: str, profile_lastname: str, profile_domain: str):
         if db_user and profile_vk_id:
-            return db.add_favorite(db_user, profile_vk_id)
+            return db.add_favorite(db_user, profile_vk_id, profile_firstname, profile_lastname, profile_domain)
         raise ValueError('Problem with vk_id')
 
     def add_to_blacklist(self, db_user, profile_vk_id: int = None):
@@ -172,7 +172,7 @@ class VkBot(VKBase):
             return 'Избранных пока нету'
         verbose_favorites = 'Твои избранные: \n'
         for i, profile in enumerate(favorites, start=1):
-            verbose_favorites += f'{i}. {str(profile.profile_id)}\n'
+            verbose_favorites += f'{i}. {profile.first_name} {profile.last_name} - https://vk.com/{profile.domain} \n'
         return verbose_favorites
 
     def already_viewed(self, db_user, profile_id) -> bool:

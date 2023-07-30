@@ -17,10 +17,10 @@ class BaseCRUD:
         print(f'Создан новый пользователь {vk_id}')
         return user
 
-    def add_favorite(self, db_user, profile_vk_id: int) -> bool:
-
+    def add_favorite(self, db_user, profile_vk_id: int, profile_firstname: str, profile_lastname: str,
+                     profile_domain: str) -> bool:
         try:
-            profile = self.get_or_create_new_favorite_profile(profile_vk_id)
+            profile = self.get_or_create_profile(profile_vk_id, profile_firstname, profile_lastname, profile_domain)
 
             new_favourite_profile = UserFavouriteProfile(
                 user_id=db_user.id,
@@ -37,7 +37,7 @@ class BaseCRUD:
     def add_to_blacklist(self, db_user: int, profile_vk_id: int) -> bool:
 
         try:
-            profile = self.get_or_create_new_blacklist_profile(profile_vk_id)
+            profile = self.get_or_create_profile(profile_vk_id)
 
             new_blacklist_profile = UserBlackList(
                 user_id=db_user.id,
@@ -51,27 +51,24 @@ class BaseCRUD:
         except:
             return False
 
-    def get_or_create_new_favorite_profile(self, profile_vk_id: int):
+    def get_or_create_profile(self, profile_vk_id, profile_firstname=None, profile_lastname=None, profile_domain=None):
         profile = session.query(Profile).filter(Profile.profile_id == profile_vk_id).first()
         if profile:
-            print(f'Профиль {profile_vk_id} уже был в избранных')
+            if profile_firstname:
+                profile.first_name = profile_firstname
+            if profile_lastname:
+                profile.last_name = profile_lastname
+            if profile_domain:
+                profile.domain = profile_domain
             return profile
-
-        profile = Profile(profile_id=profile_vk_id)
-        session.add(profile)
-        session.commit()
-        session.refresh(profile)
-        print(f'Создан новый профиль: {profile_vk_id}')
-        return profile
-
-    def get_or_create_new_blacklist_profile(self, profile_vk_id: int):
-        profile = session.query(Profile).filter(Profile.profile_id == profile_vk_id).first()
-        if profile:
-            print(f'Профиль {profile_vk_id} уже был в черных списках')
-            return profile
-
-        profile = Profile(profile_id=profile_vk_id)
-        session.add(profile)
+        else:
+            profile = Profile(
+                profile_id=profile_vk_id,
+                first_name=profile_firstname,
+                last_name=profile_lastname,
+                domain=profile_domain
+            )
+            session.add(profile)
         session.commit()
         session.refresh(profile)
         print(f'Создан новый профиль: {profile_vk_id}')

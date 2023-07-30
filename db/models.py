@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Date
+from sqlalchemy import Column, Integer, ForeignKey, Date, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -56,6 +56,9 @@ class Profile(Base):
     __tablename__ = 'profile'
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    domain = Column(String, nullable=False)
 
     def __str__(self):
         return f'Profile {self.id}: vk_id: {self.profile_id}'
