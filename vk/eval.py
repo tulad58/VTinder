@@ -1,10 +1,5 @@
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-
-nltk.download('punkt')
-nltk.download('stopwords')
-
+import string
+import re
 
 def extract_keywords(text):
     """
@@ -14,10 +9,19 @@ def extract_keywords(text):
     Returns:
         list: Список ключевых слов
     """
+    # Удаление символов пунктуации из строки
+    str_cleaned = text.translate(str.maketrans('', '', string.punctuation))
+    # Поиск всех слов в строке, содержащих более 2х символов
+    words = re.findall(r'\b\w{3,}\b', str_cleaned.lower())
+    # Возвращаем список уникальных слов
+    return list(set(words))
 
-    stop_words = set(stopwords.words('russian'))
-    keywords = word_tokenize(text.lower(), language='russian')
-    return [token for token in keywords if token.isalpha() and token not in stop_words and len(token) > 2]
+
+def get_cost_eval(user_key, profile_interests, point):
+    cost_eval = 0
+    if user_key and profile_interests:
+        cost_eval = point * round(get_matches(profile_interests, user_key) / len(user_key), 2)
+    return cost_eval
 
 
 def get_matches(profile_interests, key_interests):
@@ -46,18 +50,12 @@ def evaluation_profiles(current_user, founded_profiles):
         # если не указан год рождения
         else:
             cost_age = 3
-        # cost_interest - вес равен 4 * на процент совпадений
-        cost_interest = 0
-        if profile.get('interests'):
-            cost_interest = 7 * round(get_matches(profile['interests'], user_interest_key) / len(user_interest_key), 2)
+        # cost_interest - вес равен 7 * на процент совпадений
+        cost_interest = get_cost_eval(user_interest_key, profile.get('interests'), 7)
         # cost_music - вес равен 3 * на процент совпадений
-        cost_music = 0
-        if profile.get('music'):
-            cost_music = 5 * round(get_matches(profile['music'], user_music_key) / len(user_music_key), 2)
+        cost_music = get_cost_eval(user_music_key, profile.get('music'), 5)
         # cost_books - вес равен 2 * на процент совпадений
-        cost_books = 0
-        if profile.get('books'):
-            cost_books = 2 * round(get_matches(profile['books'], user_books_key) / len(user_books_key), 2)
+        cost_books = get_cost_eval(user_books_key, profile.get('books'), 2)
 
         founded_profiles[i]['eval'] = cost_age + cost_interest + cost_music + cost_books
 
