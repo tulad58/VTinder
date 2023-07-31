@@ -44,8 +44,8 @@ class VkUserSession(VKBase):
             'sex': search_sex,
             'city_id': int(city_id),
             'status': status,
-            'has_photo': True,
-            'is_closed': False,
+            'has_photo': 1,
+            # 'is_closed': False,
         }
 
         users = []
