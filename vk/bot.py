@@ -23,7 +23,6 @@ class VkBot(VKBase):
     def start(self):
         for event in self.long_poll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                # Проверяем наличие пользователя и токена
                 vk_user_token = self.check_user_registration(event)
                 if vk_user_token:
                     user_session, have_all_we_need = self.get_or_create_session(vk_user_token, event)
@@ -61,16 +60,12 @@ class VkBot(VKBase):
         current_user_bdate = current_user.get('bdate')
         age_from = settings.default_age_from
         age_to = settings.default_age_to
-        if current_user_bdate:
+        if current_user_bdate and len(current_user_bdate) >= 8:
             current_user['age'] = calculate_age(current_user_bdate)
             age_from = current_user['age'] - 5 if current_user['sex'] == 2 else current_user['age']
             age_to = current_user['age'] if current_user['sex'] == 2 else current_user['age'] + 5
         if not user_session.founded_profiles:
-            # Теперь получаем больше 1000, если по первому стеку закончились данные,
-            # то для новых search_users можно отработать с status=1,
-            # но тогда нужно будет хранить историю использования status
-            self.send_msg(send_id=event.user_id,
-                          message=f'️🕵️Начинаю поиск...')
+            self.send_msg(event.user_id, '️🧐Начинаю поиск...')
 
             founded_profiles = user_session.search_users(
                 sex=current_user['sex'],
@@ -78,11 +73,10 @@ class VkBot(VKBase):
                 age_from=age_from,
                 age_to=age_to
             )
-            # перед добавлением в stack добавить функцию, которая будет удалять из списка избранных и чс
-
-            # сортировка founded_profiles с оценкой интересов
-            self.send_msg(send_id=event.user_id,
-                          message=f'🕵️Выбираю кто тебе больше подходит...')
+            founded_profiles = [profile for profile in founded_profiles if
+                                not self.already_viewed(user_session.db_user, profile['id']) and not profile[
+                                    'is_closed']]
+            self.send_msg(event.user_id, '️🤔 Выбираю кто тебе больше подходит...')
             user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
         self.response_handler(user_session, event, current_user)
 
@@ -121,8 +115,6 @@ class VkBot(VKBase):
         message_pack = settings.male_msgs if current_user['sex'] == 2 else settings.female_msgs
         while True:
             profile = user_session.founded_profiles.pop(user_session.pop)
-            if self.already_viewed(user_session.db_user, profile['id']):
-                continue
             photo_attachments = user_session.get_photos(owner_id=profile['id'])
             if photo_attachments is None:
                 continue

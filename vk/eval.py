@@ -45,7 +45,7 @@ def evaluation_profiles(current_user, founded_profiles):
 
     for i, profile in enumerate(founded_profiles):
         # cost_age_one - вес 5 идет сравнение с разницей в возрасте, чем больше разница, тем меньше балл
-        if profile.get('bdate') and len(profile.get('bdate')) >= 8:
+        if profile.get('bdate') and len(profile.get('bdate')) >= 8 and len(current_user['bdate']) >= 8:
             cost_age = 5 - abs(int(current_user['bdate'][-4:]) - int(profile['bdate'][-4:]))
         # если не указан год рождения
         else:
