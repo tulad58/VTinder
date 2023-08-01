@@ -36,7 +36,7 @@ class User(Base):
         backref='haters'
     )
 
-    setting = relationship('UserSetting', backref='user')
+    # setting = relationship('UserSetting', backref='user')
 
     def __str__(self):
         return f'User {self.id}: vk_id: {self.user_vk_id}'
@@ -46,10 +46,15 @@ class UserSetting(Base):
     __tablename__ = 'user_setting'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(ForeignKey('user.id'), nullable=False)
-    gender_vk_id = Column(Integer, nullable=False)
-    target_gender_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, unique=True, nullable=False)
+    gender_id = Column(Integer, nullable=False)
     date_of_birth = Column(Date, nullable=True)
+    city_id = Column(Integer, nullable=True)
+    token = Column(String(length=220), unique=True, nullable=False)
+
+    def __init__(self, user_id, token, gender_id=0, date_of_birth=None, city_id=None):
+        if gender_id not in [0, 1, 2]:
+            raise ValueError("Недопустимое значение gender_id. Допустимы значения: 0, 1, 2.")
 
 
 class Profile(Base):

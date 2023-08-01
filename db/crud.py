@@ -1,5 +1,5 @@
 from db.session import session
-from .models import User, Profile, UserFavouriteProfile, UserBlackList
+from .models import User, Profile, UserFavouriteProfile, UserBlackList, UserSetting
 
 
 class BaseCRUD:
@@ -75,6 +75,40 @@ class BaseCRUD:
         if profile_vk_id in set(black_list + favorites):
             return True
         return False
+
+    def get_user_setting(self, user_id):
+        try:
+            user_setting = session.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+            if user_setting:
+                print(f'Настройки пользователя {user_id} есть в базе данных')
+                return user_setting
+
+        except Exception as e:
+            print("Ошибка:", e)
+            return None
+
+    def create_user_setting(self, user_id, token, gender_id=0, date_of_birth=None, city_id=None):
+        try:
+            user_setting = self.get_user_setting(user_id)
+
+            if user_setting is None:
+                user_setting = UserSetting(user_id=user_id, token=token, gender_id=gender_id,
+                                           date_of_birth=date_of_birth, city_id=city_id)
+                session.add(user_setting)
+            else:
+                user_setting.token = token
+                user_setting.gender_id = gender_id
+                user_setting.date_of_birth = date_of_birth
+                user_setting.city_id = city_id
+
+            session.commit()
+            session.refresh(user_setting)
+            print(f'Добавлены/обновлены настройки пользователя {user_id}')
+            return user_setting
+
+        except Exception as e:
+            print("Ошибка:", e)
+            return None
 
 
 db = BaseCRUD()

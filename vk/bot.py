@@ -22,24 +22,28 @@ class VkBot(VKBase):
 
     def start(self):
         for event in self.long_poll.listen():
+            print(event)
             if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                vk_user_token = self.check_user_registration(event)
-                if vk_user_token:
-                    user_session, have_all_we_need = self.get_or_create_session(vk_user_token, event)
+                vk_user_setting = self.check_user_registration(event)  # получив токен впервые тут создал первую сессию
+                if vk_user_setting:
+                    # check_update_user_params решил заменить на check_update_user_settings но сверяя с базой
+                    # have_all_we_need = self.check_update_user_settings(event, vk_user_setting, new_session)  # сессию потерял тут создав новую
+                    user_session, have_all_we_need = self.get_or_create_session(vk_user_setting, event)
                     if have_all_we_need:
                         self.request_handler(user_session, event)
 
-    def get_or_create_session(self, vk_user_token, event):
+    def get_or_create_session(self, vk_user_setting, event):
         have_all_we_need = True
         if event.user_id in self.user_sessions:
             return self.user_sessions.get(event.user_id), have_all_we_need
-        new_session = VkUserSession(user_access_token=vk_user_token)
-        current_user = new_session.get_users_info(user_ids=event.user_id)[0]
-        have_all_we_need = self.check_update_user_params(event, current_user, new_session)
+        new_session = VkUserSession(user_access_token=vk_user_setting.token)
+        # current_user = new_session.get_users_info(user_ids=event.user_id)[0]
+        have_all_we_need = self.check_update_user_settings(event, vk_user_setting, new_session)
+        # have_all_we_need = self.check_update_user_params(event, current_user, new_session)
         if have_all_we_need:
-            new_session.set_db_user(db.get_or_create_user(current_user['id']))
-            new_session.set_user(current_user)
-            self.user_sessions[current_user['id']] = new_session
+            new_session.set_db_user(db.get_or_create_user(vk_user_setting.user_id))
+            new_session.set_user(vk_user_setting)
+            self.user_sessions[f'{vk_user_setting.user_id}'] = new_session
         return new_session, have_all_we_need
 
     def request_handler(self, user_session: VkUserSession, event):
@@ -57,19 +61,16 @@ class VkBot(VKBase):
         if next:
             user_session.increase_pop()
         current_user = user_session.user
-        current_user_bdate = current_user.get('bdate')
-        age_from = settings.default_age_from
-        age_to = settings.default_age_to
-        if current_user_bdate and len(current_user_bdate) >= 8:
-            current_user['age'] = calculate_age(current_user_bdate)
-            age_from = current_user['age'] - 5 if current_user['sex'] == 2 else current_user['age']
-            age_to = current_user['age'] if current_user['sex'] == 2 else current_user['age'] + 5
+        current_user_age = calculate_age(current_user.date_of_birth.strftime('%d.%m.%Y'))
+        age_from = current_user_age - 5 if current_user.gender_id == 2 else current_user_age
+        age_to = current_user_age if current_user.gender_id == 2 else current_user_age + 5
+
         if not user_session.founded_profiles:
             self.send_msg(event.user_id, '️🧐Начинаю поиск...')
 
             founded_profiles = user_session.search_users(
-                sex=current_user['sex'],
-                city_id=current_user['city']['id'],
+                sex=current_user.gender_id,
+                city_id=current_user.city_id,
                 age_from=age_from,
                 age_to=age_to
             )
@@ -77,7 +78,9 @@ class VkBot(VKBase):
                                 not self.already_viewed(user_session.db_user, profile['id']) and not profile[
                                     'is_closed']]
             self.send_msg(event.user_id, '️🤔 Выбираю кто тебе больше подходит...')
-            user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
+            # Нет хранения интересов в бд
+            # user_session.founded_profiles = evaluation_profiles(current_user, founded_profiles)
+            user_session.founded_profiles = founded_profiles
         self.response_handler(user_session, event, current_user)
 
     def payload_handler(self, user_session: VkUserSession, event):
@@ -189,7 +192,7 @@ class VkBot(VKBase):
 
     def add_new_user(self, user) -> bool:
         '''
-        Функция принимает пользователя, проверяет есть ли он в БД,
+        Функция принимает пользователя, проверяет есть ли он в БД.
         Добавляет если его нет и возвращает True, иначе False
         '''
 
@@ -221,28 +224,70 @@ class VkBot(VKBase):
 
     def check_user_registration(self, event):
         if 'token' in event.text:
-            access_token = re.findall(r'(vk1[^&]+)', event.text)[0]
-            print(access_token)
-            msg = 'Получен access_token 💾 '
-            payload = '{\"command\":\"access_token\"}'
-            self.send_msg(send_id=event.user_id, message=msg, payload=payload)
-            # Добавить в БД User токен и функцию получения / обновления токена
-            # т.е. проверяем есть ли пользователь в БД по event.user_id если нет, то добавляем в БД с token,
-            # если есть то обновляем token
+            access_token = re.findall(r'(vk1[^&]+)', event.text)
+            if access_token:
+                new_session = VkUserSession(user_access_token=access_token[0])
+                user_ = new_session.get_users_info(user_ids=event.user_id)[0]
+                user_setting = db.create_user_setting(user_id=user_.get('id'),
+                                                      token=access_token[0],
+                                                      gender_id=user_.get('sex'),
+                                                      date_of_birth=user_.get('bdate'),
+                                                      city_id=user_.get('city').get('id'))
+                msg = 'Получен access_token 💾 '
+                payload = '{\"command\":\"access_token\"}'
+                self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+                return user_setting
+            else:
+                msg = '❗❗❗Значение access_token неопределенно❗❗❗\n' \
+                      'Отправьте новое сообщение с командой token\n' \
+                      'Пример, token - vk1.a.************************************'
+                payload = '{\"command\":\"access_token\"}'
+                self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+                return None
         else:
-            # Делаем запрос в БД по event.user_id для уточнения токена
+            # Делаем запрос в БД по event.user_id для уточнения регистрации и наличия токена
+            user_setting = db.get_user_setting(event.user_id)
             # Временно добавил подставку settings.VK_USER_TOKEN, когда БД доделаем, то уберем
-            token = settings.VK_USER_TOKEN
-            # token = False
-            if not token:
+            # user_setting.token = settings.VK_USER_TOKEN
+            if user_setting is None:
                 msg = 'Привет🤚\n' \
                       'Для работы поиска необходим access_token пользователя ⚙️\n' \
-                      'Пройдите по ссылке 👇\n' \
+                      'Откройте ссылку в браузере 👇\n' \
                       f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=327686' \
                       f'&response_type=token\n' \
                       'Появится окно с запросом доступа 👉 нажимаем "Разрешить"\n' \
                       'В результате Браузер перекинет на другую ссылку\n' \
                       'Из этой ссылки нужно скопировать access_token и отправить сообщение с командой token\n' \
                       'Пример, token - vk1.a.************************************'
+
                 self.send_msg(send_id=event.user_id, message=msg)
-            return token
+
+            return user_setting
+
+    def check_update_user_settings(self, event, user_setting, new_session):
+        if user_setting.city_id is None or user_setting.date_of_birth is None:
+            if 'setting' in event.text:
+                setting = re.findall(r'-\s*(\d{2}.\d{2}.\d{4})\s*-\s*(\S+)', event.text)[0]
+                user_setting.date_of_birth = setting[0]
+                city = new_session.get_city(setting[1])
+                user_setting.city_id = city.get('id')
+                user_setting = db.create_user_setting(user_id=user_setting.user_id,
+                                                      token=user_setting.token,
+                                                      gender_id=user_setting.gender_id,
+                                                      date_of_birth=user_setting.date_of_birth,
+                                                      city_id=user_setting.city_id)
+
+                msg = f'Получены настройки\n ' \
+                      f'Дата рождения: {user_setting.date_of_birth},\n ' \
+                      f'Город поиска:  {city["title"]}'
+                payload = '{\"command\":\"setting\"}'
+                self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+
+                return True
+            else:
+                msg = 'Не удается получить данные пользователя😔\n' \
+                      'Введи команду setting с указанием даты рождения и города.\n\n' \
+                      'Пример: setting - 01.01.1990 - Москва'
+                self.send_msg(send_id=event.user_id, message=msg)
+                return False
+        return True
