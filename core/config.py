@@ -38,13 +38,14 @@ class Settings:
         'Лучше не будет, выбирай)'
     )
 
-    request_fields = 'about, activities, bdate, books, can_send_friend_request, can_write_private_message, city, ' \
-                     'domain, interests, lists, music, photo_max_orig, quotes, relation, screen_name, sex'
+    request_fields = 'about, bdate, books, city, domain, interests, lists, music, photo_max_orig, screen_name, sex'
 
     bot_commands = ['привет', '❤️', '👎', '➡️', 'избранные', 'выход', 'setting', 'token']
 
     default_age_from = 18
     default_age_to = 30
+
+    eval_limit = 5
 
 
 settings = Settings()

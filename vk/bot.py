@@ -189,7 +189,7 @@ class VkBot(VKBase):
 
     def add_new_user(self, user) -> bool:
         '''
-        Функция принимает пользователя, проверяет есть ли он в БД,
+        Функция принимает пользователя, проверяет есть ли он в БД.
         Добавляет если его нет и возвращает True, иначе False
         '''
 
@@ -197,10 +197,8 @@ class VkBot(VKBase):
         return db.get_or_create_user(user_vk_id)
 
     def check_update_user_params(self, event, current_user, vk_session):
-        if not current_user.get('sex') or not current_user.get('city'):
-            # Обработать исключения когда у пользователя нет города или пола
-            pass
-        if not current_user.get('bdate'):
+        birthday = current_user.get('bdate')
+        if not birthday or len(birthday) <= 8 or not current_user.get('city').get('id'):
             if 'setting' in event.text:
                 setting = re.findall(r'-\s*(\d{2}.\d{2}.\d{4})\s*-\s*(\S+)', event.text)[0]
                 current_user['bdate'] = setting[0]
@@ -221,23 +219,29 @@ class VkBot(VKBase):
 
     def check_user_registration(self, event):
         if 'token' in event.text:
-            access_token = re.findall(r'(vk1[^&]+)', event.text)[0]
-            print(access_token)
-            msg = 'Получен access_token 💾 '
-            payload = '{\"command\":\"access_token\"}'
-            self.send_msg(send_id=event.user_id, message=msg, payload=payload)
-            # Добавить в БД User токен и функцию получения / обновления токена
-            # т.е. проверяем есть ли пользователь в БД по event.user_id если нет, то добавляем в БД с token,
-            # если есть то обновляем token
+            access_token = re.findall(r'(vk1[^&]+)', event.text)
+            if access_token:
+                token = access_token[0]
+                msg = 'Получен access_token 💾 '
+                payload = '{\"command\":\"access_token\"}'
+                self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+                return token
+            else:
+                msg = '❗❗❗Значение access_token неопределенно❗❗❗\n' \
+                      'Отправьте новое сообщение с командой token\n' \
+                      'Пример, token - vk1.a.************************************'
+                payload = '{\"command\":\"access_token\"}'
+                self.send_msg(send_id=event.user_id, message=msg, payload=payload)
+                return None
         else:
-            # Делаем запрос в БД по event.user_id для уточнения токена
-            # Временно добавил подставку settings.VK_USER_TOKEN, когда БД доделаем, то уберем
+            # access_token временный и его хранение в бд не безопасно,
+            # поэтому добавили подставку токена пользователя из настроек приложения settings.VK_USER_TOKEN
             token = settings.VK_USER_TOKEN
             # token = False
             if not token:
                 msg = 'Привет🤚\n' \
                       'Для работы поиска необходим access_token пользователя ⚙️\n' \
-                      'Пройдите по ссылке 👇\n' \
+                      'Откройте ссылку в браузере 👇\n' \
                       f'https://oauth.vk.com/authorize?client_id={settings.VK_CLIENT_ID}&scope=327686' \
                       f'&response_type=token\n' \
                       'Появится окно с запросом доступа 👉 нажимаем "Разрешить"\n' \
@@ -246,3 +250,4 @@ class VkBot(VKBase):
                       'Пример, token - vk1.a.************************************'
                 self.send_msg(send_id=event.user_id, message=msg)
             return token
+
