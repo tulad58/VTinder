@@ -3,8 +3,8 @@ from .models import User, Profile, UserFavouriteProfile, UserBlackList
 
 
 class BaseCRUD:
-
-    def get_or_create_user(self, vk_id: int):
+    @staticmethod
+    def get_or_create_user(vk_id: int):
         user = session.query(User).filter(User.user_vk_id == vk_id).first()
         if user:
             print(f'Пользователь {vk_id} уже был в базе')
@@ -39,7 +39,8 @@ class BaseCRUD:
         except:
             return False
 
-    def get_or_create_profile(self, profile_vk_id, profile_firstname=None, profile_lastname=None, profile_domain=None):
+    @staticmethod
+    def get_or_create_profile(profile_vk_id, profile_firstname=None, profile_lastname=None, profile_domain=None):
         profile = session.query(Profile).filter(Profile.profile_id == profile_vk_id).first()
         if profile:
             if profile_firstname:
@@ -62,13 +63,15 @@ class BaseCRUD:
         print(f'Создан новый профиль: {profile_vk_id}')
         return profile
 
-    def get_favorites(self, db_user):
+    @staticmethod
+    def get_favorites(db_user):
         fav = db_user.favorite_profiles
         if fav:
             return fav
         return []
 
-    def exist_in_user_lists(self, db_user, profile_vk_id):
+    @staticmethod
+    def exist_in_user_lists(db_user, profile_vk_id):
         black_list = [profile.profile_id for profile in db_user.black_list]
         favorites = [profile.profile_id for profile in db_user.favorite_profiles]
 

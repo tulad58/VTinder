@@ -31,7 +31,13 @@ def get_cost_eval(user_interests: set, profile_interests: set, point: int) -> fl
         if user_interests and profile_interests else 0
 
 
-def evaluation_profiles(current_user, founded_profiles):
+def evaluation_profiles(current_user: dict, founded_profiles: list) -> list:
+    """
+    Функция выставляет оценку каждому найденному профилю и возвращает список профилей от большей оценки к меньшей
+    :param current_user: Данные пользователя
+    :param founded_profiles: Список найденных профилей
+    :return: Список найденных профилей отсортированный от большей к меньшей оценке
+    """
     user_interest_key = extract_keywords(current_user.get('interests'))
     user_music_key = extract_keywords(current_user.get('music'))
     user_books_key = extract_keywords(current_user.get('books'))

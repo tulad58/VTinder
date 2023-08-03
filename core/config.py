@@ -39,13 +39,9 @@ class Settings:
     )
 
     request_fields = 'about, bdate, books, city, domain, interests, lists, music, photo_max_orig, screen_name, sex'
-
     bot_commands = ['привет', '❤️', '👎', '➡️', 'избранные', 'выход', 'setting', 'token']
-
     default_age_from = 18
     default_age_to = 30
-
     eval_limit = 5
-
 
 settings = Settings()

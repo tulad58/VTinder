@@ -45,7 +45,6 @@ class VkUserSession(VKBase):
             'city_id': int(city_id),
             'status': status,
             'has_photo': 1,
-            # 'is_closed': False,
         }
 
         users = []

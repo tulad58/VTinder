@@ -111,7 +111,6 @@ class VkBot(VKBase):
             self.send_msg(send_id=event.user_id, message='👋Возвращайся еще')
 
     def response_handler(self, user_session, event, current_user):
-        photo_attachments = None
         message_pack = settings.male_msgs if current_user['sex'] == 2 else settings.female_msgs
         while True:
             profile = user_session.founded_profiles.pop(user_session.pop)
@@ -134,6 +133,7 @@ class VkBot(VKBase):
         :param message: содержимое отправляемого сообщения
         :param attachments: строка с фото контентом отправляемого сообщения
         :param keyboard: объект кнопок VkKeyboard
+        :param payload: параметр для получения обратной связи в виде json строки
         :return: None
         """
         try:
@@ -147,8 +147,8 @@ class VkBot(VKBase):
         except vk_api.exceptions.ApiError as error:
             print('Ошибка отправки сообщения: ', error)
 
-    def add_to_list(self,
-                    db_user,
+    @staticmethod
+    def add_to_list(db_user,
                     profile_vk_id: int,
                     profile_firstname: str,
                     profile_lastname: str,
@@ -165,10 +165,11 @@ class VkBot(VKBase):
             )
         raise ValueError('Problem with vk_id')
 
-    def get_favorites(self, user_id):
+    @staticmethod
+    def get_favorites(user_id):
         '''
         Функция возвращает список строк favorites текущего пользователя:
-        Структура: ФИО -- Возраст -- Город -- Ссылка
+        Структура: ФИО -- Ссылка
         :return:
         '''
         favorites = db.get_favorites(user_id)
@@ -179,7 +180,8 @@ class VkBot(VKBase):
             verbose_favorites += f'{i}. {profile.first_name} {profile.last_name} - https://vk.com/{profile.domain} \n'
         return verbose_favorites
 
-    def already_viewed(self, db_user, profile_id) -> bool:
+    @staticmethod
+    def already_viewed(db_user, profile_id) -> bool:
         '''
         Эта функция проверяет есть ли пользователь в каких либо списках у текущего пользователя
         :param user:
@@ -187,7 +189,8 @@ class VkBot(VKBase):
         '''
         return db.exist_in_user_lists(db_user, profile_id)
 
-    def add_new_user(self, user) -> bool:
+    @staticmethod
+    def add_new_user(user) -> bool:
         '''
         Функция принимает пользователя, проверяет есть ли он в БД.
         Добавляет если его нет и возвращает True, иначе False

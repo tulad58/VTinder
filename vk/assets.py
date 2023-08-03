@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 
@@ -33,7 +32,7 @@ def keyboard_gen(event, profile):
                                  'profile_domain': profile['domain'],
                                  })
     keyboard.add_button('➡️', color=VkKeyboardColor.SECONDARY, payload={'command': 'next'})
-    keyboard.add_line()  # Новая строка для кнопок
+    keyboard.add_line()
     keyboard.add_button('Избранные',
                         color=VkKeyboardColor.PRIMARY,
                         payload={

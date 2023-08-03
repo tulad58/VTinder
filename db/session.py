@@ -13,7 +13,8 @@ class DBHandler:
     def __init__(self):
         self.Session = None
 
-    def create_db(self):
+    @staticmethod
+    def create_db():
         connection = psycopg2.connect(user=settings.DB_USER, password=settings.DB_PASSWORD)
         connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
