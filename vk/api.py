@@ -67,26 +67,26 @@ class VkUserSession(VKBase):
             'rev': 1,
             'extended': 1
         }
+
+        photos = []
         try:
-            photos = []
             photos_from_avatars = self.vk.method('photos.get', params).get('items')
-            if photos_from_avatars:
-                photos += photos_from_avatars
-            photos_marked_user = self.vk.method('photos.getUserPhotos', {'user_id': owner_id, 'extended': 1})\
-                .get('items')
-            if photos_marked_user:
-                photos += photos_marked_user
-            if photos:
-                photos_top_likes = sorted(photos, key=lambda x: x['likes']['count'], reverse=True)[:3]
-                return ','.join([f'photo{photo["owner_id"]}_{photo["id"]}' for photo in photos_top_likes])
-            return None
-        except vk_api.exceptions.ApiError as e:
-            if e.code == 30 or e.code == 7:
-                print(f"Профиль пользователя {owner_id} является приватным")
-            else:
-                # Обработка других ошибок API VK, если необходимо
-                print("Ошибка API VK:", e)
-            return None
+        except vk_api.exceptions.ApiError:
+            photos_from_avatars = None
+            print(f"Не удалось получить фото профиля пользователем {owner_id}")
+        if photos_from_avatars:
+            photos += photos_from_avatars
+        try:
+            photos_marked_user = self.vk.method('photos.getUserPhotos', {'user_id': owner_id, 'extended': 1}).get('items')
+        except vk_api.exceptions.ApiError:
+            photos_marked_user = None
+            print(f"Не удалось получить фото с пользователем {owner_id}")
+        if photos_marked_user:
+            photos += photos_marked_user
+        if photos:
+            photos_top_likes = sorted(photos, key=lambda x: x['likes']['count'], reverse=True)[:3]
+            return ','.join([f'photo{photo["owner_id"]}_{photo["id"]}' for photo in photos_top_likes])
+        return None
 
     def get_city(self, city_name):
         city = self.vk.method('database.getCities', {'q': city_name.capitalize(), 'count': 5}).get('items')
