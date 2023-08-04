@@ -10,9 +10,6 @@ from .models import Base
 
 class DBHandler:
 
-    def __init__(self):
-        self.Session = None
-
     @staticmethod
     def create_db():
         connection = psycopg2.connect(user=settings.DB_USER, password=settings.DB_PASSWORD)
@@ -36,13 +33,20 @@ class DBHandler:
         try:
             engine = create_engine(settings.DATABASE_URL)
             Base.metadata.create_all(engine)
-            self.Session = sessionmaker(bind=engine)
-            session = self.Session()
-            return session
+            return sessionmaker(bind=engine)
         except SQLAlchemyError as error:
             print("Ошибка подключения к базе данных:")
             raise error
 
+    def get_session(self):
+        session = self.SessionLocal()
+        try:
+            yield session
+        except SQLAlchemyError as error:
+            print("Ошибка подключения к базе данных:", error)
+        finally:
+            session.close()
+
 
 db = DBHandler()
-session = db.connect()
+SessionLocal = db.connect()

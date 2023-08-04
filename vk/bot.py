@@ -108,6 +108,7 @@ class VkBot(VKBase):
             fav = self.get_favorites(user_session.db_user)
             self.send_msg(send_id=event.user_id, message=fav)
         elif command == 'exit':
+            self.user_sessions.pop(event.user_id)
             self.send_msg(send_id=event.user_id, message='👋Возвращайся еще')
 
     def response_handler(self, user_session, event, current_user):
