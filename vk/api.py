@@ -10,32 +10,36 @@ class VkUserSession(VKBase):
 
     def __init__(self, user_access_token, version=settings.VK_API_VERSION, user=None, db_user=None):
         super().__init__(user_access_token, version)
-        self.__user = user
+        self.__vk_user = user
         self.__pop_marker = 0
         self.__db_user = db_user
         self.founded_profiles = None
         VkUserSession.sessions_count += 1
 
-    def set_db_user(self, db_user):
-        self.__db_user = db_user
-
     @property
     def db_user(self):
         return self.__db_user
 
-    def set_user(self, user):
-        self.__user = user
+    @db_user.setter
+    def db_user(self, db_user):
+        self.__db_user = db_user
 
     @property
-    def user(self):
-        return self.__user
+    def vk_user(self):
+        return self.__vk_user
 
-    def increase_pop(self):
+    @vk_user.setter
+    def vk_user(self, user):
+        self.__vk_user = user
+
+    @property
+    def pop_marker(self):
+        return self.__pop_marker
+
+    @pop_marker.setter
+    def pop_marker(self):
         self.__pop_marker += 1
 
-    @property
-    def pop(self):
-        return self.__pop_marker
 
     def search_users(self, city_id, age_from, age_to, sex=0, status=6):
         search_sex = 2 if sex == 1 else 1 if sex == 2 else 0

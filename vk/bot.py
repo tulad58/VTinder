@@ -37,8 +37,8 @@ class VkBot(VKBase):
         current_user = new_session.get_users_info(user_ids=event.user_id)[0]
         have_all_we_need = self.check_update_user_params(event, current_user, new_session)
         if have_all_we_need:
-            new_session.set_db_user(db.get_or_create_user(current_user['id']))
-            new_session.set_user(current_user)
+            new_session.db_user = db.get_or_create_user(current_user['id'])
+            new_session.vk_user = current_user
             self.user_sessions[current_user['id']] = new_session
         return new_session, have_all_we_need
 
@@ -55,8 +55,8 @@ class VkBot(VKBase):
 
     def text_handler(self, user_session: VkUserSession, event, next=None):
         if next:
-            user_session.increase_pop()
-        current_user = user_session.user
+            user_session.pop_marker()
+        current_user = user_session.vk_user
         current_user_bdate = current_user.get('bdate')
         age_from = settings.default_age_from
         age_to = settings.default_age_to
@@ -114,7 +114,7 @@ class VkBot(VKBase):
     def response_handler(self, user_session, event, current_user):
         message_pack = settings.male_msgs if current_user['sex'] == 2 else settings.female_msgs
         while True:
-            profile = user_session.founded_profiles.pop(user_session.pop)
+            profile = user_session.founded_profiles.pop(user_session.pop_marker)
             photo_attachments = user_session.get_photos(owner_id=profile['id'])
             if photo_attachments is None:
                 continue
