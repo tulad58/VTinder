@@ -55,7 +55,7 @@ class VkBot(VKBase):
 
     def text_handler(self, user_session: VkUserSession, event, next=None):
         if next:
-            user_session.pop_marker()
+            user_session.pop_marker
         current_user = user_session.vk_user
         current_user_bdate = current_user.get('bdate')
         age_from = settings.default_age_from
